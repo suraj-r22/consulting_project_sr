@@ -1,0 +1,611 @@
+---
+title: "EDA With Grade Averages Dataset"
+author: 'Suraj Rajan (UID: 206066871)'
+date: "2024-06-07"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+grade_avg <- read.csv("grade_cleaned3_with_averages.csv")
+```
+
+```{r}
+#head(grade_avg)
+
+dim(grade_avg)
+```
+```{r}
+
+library(dplyr)
+grade_avg_filt <- grade_avg %>%
+   filter(!is.na(Overall_Rating) & !is.na(Easiness) & !is.na(Clarity) & !is.na(Workload) & !is.na(Helpfulness) & !is.na(A.Plus) & 
+           !is.na(A) & !is.na(A.Minus) & !is.na(B.Plus) & !is.na(B) & !is.na(B.Minus) & !is.na(C.Plus) & !is.na(C) & !is.na(C.Minus) & !is.na(D.Plus) & !is.na(D) & !is.na(D.Minus) & !is.na(`F`))
+
+dim(grade_avg_filt)
+
+summary(grade_avg_filt)
+
+table(grade_avg_filt$Dept.Type)
+  
+```
+
+
+```{r}
+correlation_data <- grade_avg_filt %>% 
+  select(Overall_Rating, Easiness, A.Plus, A, A.Minus, B.Plus, B, B.Minus, C.Plus, C, C.Minus, D.Plus, D, D.Minus, 'F')
+
+
+cor_matrix <- cor(correlation_data, use = "complete.obs", method = "pearson")
+print(cor_matrix)
+```
+
+
+```{r}
+
+shapiro.test(grade_avg_filt$Overall_Rating[grade_avg_filt$Dept.Type == "stem"])
+shapiro.test(grade_avg_filt$Overall_Rating[grade_avg_filt$Dept.Type == "non-stem"])
+
+
+
+
+```
+
+```{r}
+qqnorm(grade_avg_filt$Overall_Rating[grade_avg_filt$Dept.Type == "stem"])
+qqline(grade_avg_filt$Overall_Rating[grade_avg_filt$Dept.Type == "stem"], col = "steelblue")
+
+qqnorm(grade_avg_filt$Overall_Rating[grade_avg_filt$Dept.Type == "non-stem"])
+qqline(grade_avg_filt$Overall_Rating[grade_avg_filt$Dept.Type == "non-stem"], col = "steelblue")
+```
+
+```{r}
+stem_ratings <- grade_avg_filt %>% 
+  filter(Dept.Type == "stem") %>%
+  pull(Overall_Rating)
+
+non_stem_ratings <- grade_avg_filt %>%
+  filter(Dept.Type == "non-stem") %>%
+  pull(Overall_Rating)
+
+test_result <- wilcox.test(stem_ratings, non_stem_ratings, alternative = "two.sided")
+
+
+print(test_result)
+```
+
+```{r}
+summary(grade_avg_filt)
+```
+
+-Departments, Visualize
+
+
+
+```{r}
+write.csv(grade_avg_filt, "grade_cleaned_with_averages", row.names = FALSE)
+```
+
+
+```{r}
+table(grade_avg_filt$Dept)
+```
+
+```{r}
+#tail(grade_avg_filt)
+```
+
+```{r}
+prof <- grade_avg_filt %>%
+  filter(Professor == "Guani Wu") %>%
+  mutate(Avg_overall = mean(Average_GPA))
+
+#prof
+```
+```{r}
+
+
+
+average_grade_distribution <- grade_avg_filt %>%
+  group_by(Professor, Class_Name) %>%
+  summarise(
+    Average_A_Plus = mean(A.Plus),
+    Average_A = mean(A),
+    Average_A_Minus = mean(A.Minus),
+    Average_B_Plus = mean(B.Plus),
+    Average_B = mean(B),
+    Average_B_Minus = mean(B.Minus),
+    Average_C_Plus = mean(C.Plus),
+    Average_C = mean(C),
+    Average_C_Minus = mean(C.Minus),
+    Average_D_Plus = mean(D.Plus),
+    Average_D = mean(D),
+    Average_D_Minus = mean(D.Minus),
+    Average_F = mean(F, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  mutate(Total_Average = Average_A_Plus + Average_A + Average_A_Minus + 
+         Average_B_Plus + Average_B + Average_B_Minus + 
+         Average_C_Plus + Average_C + Average_C_Minus + 
+         Average_D_Plus + Average_D + Average_D_Minus + 
+         Average_F) %>%
+  mutate(
+    GPA_A_Plus = Average_A_Plus * 4.0 * 100,
+    GPA_A = Average_A * 4.0 * 100,
+    GPA_A_Minus = Average_A_Minus * 3.7 * 100,
+    GPA_B_Plus = Average_B_Plus * 3.3 * 100,
+    GPA_B = Average_B * 3.0 * 100,
+    GPA_B_Minus = Average_B_Minus * 2.7 * 100,
+    GPA_C_Plus = Average_C_Plus * 2.3 * 100,
+    GPA_C = Average_C * 2.0 * 100,
+    GPA_C_Minus = Average_C_Minus * 1.7 * 100,
+    GPA_D_Plus = Average_D_Plus * 1.3 * 100,
+    GPA_D = Average_D * 1.0 * 100,
+    GPA_D_Minus = Average_D_Minus * 0.7 * 100,
+    GPA_F = Average_F * 0.0 * 100,
+    Avg_GPA = (GPA_A_Plus + GPA_A + GPA_A_Minus + 
+                 GPA_B_Plus + GPA_B + GPA_B_Minus + 
+                 GPA_C_Plus + GPA_C + GPA_C_Minus + 
+                 GPA_D_Plus + GPA_D + GPA_D_Minus + 
+                 GPA_F) / 100
+  )
+  
+
+
+#head(average_grade_distribution)
+dim(average_grade_distribution)
+```
+```{r}
+enhanced_data <- grade_avg_filt %>%
+  left_join(average_grade_distribution, by = c("Professor", "Class_Name")) %>%
+  distinct(Professor, Class_Code, Dept, Dept.Type, Class_Name, Overall_Rating, Easiness, Clarity, Workload, Helpfulness, .keep_all = TRUE) %>%
+  select(
+    Professor, Class_Code,Class_Name, Dept, Dept.Type, 
+    Overall_Rating, Easiness, Clarity, Workload, Helpfulness,
+    Average_A_Plus, Average_A, Average_A_Minus, 
+    Average_B_Plus, Average_B, Average_B_Minus,
+    Average_C_Plus, Average_C, Average_C_Minus,
+    Average_D_Plus, Average_D, Average_D_Minus, Average_F,
+    Avg_GPA,
+    Review, Review.Quarter, Reviewer.Grade
+  )
+  
+
+#head(enhanced_data)
+
+dim(enhanced_data)
+
+table(enhanced_data$Dept)
+
+colnames(enhanced_data)
+```
+
+
+
+```{r}
+library(ggplot2)
+
+ggplot(enhanced_data, aes(x = Dept, y = Avg_GPA, fill = Dept)) +
+  geom_bar(stat = "summary", fun = "mean", position = "dodge") +
+  labs(title = "Average Overall Rating by Department Type", y = "Average Rating", x = "") +
+  theme_minimal()
+```
+```{r}
+
+ggplot(enhanced_data, aes(x = Dept.Type, y = Avg_GPA, fill = Dept.Type)) +
+  geom_bar(stat = "summary", fun = "mean", position = "dodge") +
+  labs(title = "Average Overall Rating by Department Type", y = "Average Rating", x = "") +
+  theme_minimal()
+```
+
+
+
+```{r}
+gpa_rating_correlation <- cor(enhanced_data$Avg_GPA, enhanced_data$Easiness)
+
+gpa_rating_correlation
+```
+
+
+```{r}
+table(grade_avg_filt$Dept)
+table(enhanced_data$Dept)
+```
+
+
+```{r}
+#tail(enhanced_data)
+```
+```{r}
+stats_summary <- enhanced_data %>%
+  group_by(Dept.Type) %>%
+  summarise(
+    Average_Rating = mean(Overall_Rating, na.rm = TRUE),
+    Median_Rating = median(Overall_Rating, na.rm = TRUE),
+    Average_Easiness = mean(Easiness, na.rm = TRUE),
+    Average_Clarity = mean(Clarity, na.rm = TRUE),
+    Average_Workload = mean(Workload, na.rm = TRUE),
+    Average_Helpfulness = mean(Helpfulness, na.rm = TRUE)
+  )
+
+
+print(stats_summary)
+
+```
+```{r}
+table(enhanced_data$Dept.Type)
+```
+```{r}
+write.csv(enhanced_data, "grade_aggregated_data.csv", row.names = FALSE)
+```
+
+
+```{r}
+ggplot(enhanced_data, aes(x = Overall_Rating)) +
+  geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Overall Ratings", x = "Overall Rating", y = "Frequency") + theme_minimal()
+```
+
+
+```{r}
+
+enhanced_data$Dept.Type <- factor(enhanced_data$Dept.Type)
+
+levels(enhanced_data$Dept.Type)
+enhanced_data$Dept.Type <- relevel(enhanced_data$Dept.Type, ref = "non-stem")
+
+levels(enhanced_data$Dept.Type)
+model.full <- glm(Dept.Type ~ Avg_GPA + Overall_Rating + Easiness + Helpfulness + Workload + Clarity, data = enhanced_data, family = binomial)
+
+summary(model.full)
+```
+
+Relevant variables: avg_gpa, helpfulness, workload, clarity
+
+Notes On Model and Relevant Variables:
+
+`Avg_GPA`: Each unit increase in average GPA decreases the likelihood of a department being categorized as stem, with statistical significance. The negative coefficient means that higher GPA is associated with non-stem departments. 
+
+`Helpfulness`: For each one-unit increase in Helpfulness, the likelihood of the dept being non-stem increases with statistical significance. 
+
+`Workload`: Significant and positive, departments with higher workload are more likely to be non-stem. 
+
+`Clarity`: Significant and negative, higher clarity in course presentation is associated with stem departments. 
+
+
+```{r}
+model.reduced <- glm(Dept.Type ~ Avg_GPA + Helpfulness + Workload + Clarity, data = enhanced_data, family = binomial)
+
+summary(model.reduced)
+```
+
+We see that the reduced model seems to show improved statistical significance for the predictors. 
+
+
+```{r}
+anova(model.reduced, model.full, test="Chisq")
+```
+
+The above tests whether the additional predictors in the full model significantly improve the fit of the model compared to that of the reduced model. 
+
+P-Value indicates that the decrease in deviance is not statistically significant. So, adding overall_rating and easiness does not significantly improve the model's ability to predict department type. 
+
+
+```{r}
+exp(coef(model.reduced))
+```
+
+The above exponentiated coefficients for the reduced model make interpretation easier. 
+
+
+(Intercept) = 453.106864
+
+This extremely high odds ratio indicates that when all predictor variables are at zero, the odds of being in the "stem" category (relative to "non-stem") are very high. This can indicate specific baseline characteristics inherent to "stem" departments when no other influences are present.
+
+Avg_GPA = 0.133539
+
+An odds ratio less than 1 (approximately 0.13) for GPA now means that with every unit increase in GPA, the odds of the department being "stem" (as opposed to "non-stem") decrease significantly. Essentially, higher GPAs are strongly associated with remaining in or being classified as "non-stem".
+
+Helpfulness = 1.644871
+
+With an odds ratio above 1, a unit increase in helpfulness scores increases the likelihood of a department being "stem" by about 64.5%. This suggests that departments with higher helpfulness ratings are more likely to be "stem" compared to "non-stem".
+
+Workload = 1.175595
+
+This odds ratio indicates that a unit increase in workload results in a 17.6% increase in the likelihood of a department being "stem". This suggests that higher workloads are slightly more common in "stem" departments than in "non-stem" departments.
+
+Clarity = 0.680946
+
+An odds ratio below 1 implies that higher clarity decreases the odds of being "stem" by about 31.9%. Higher clarity is thus more associated with "non-stem" departments, indicating that clearer communication or expectations are more characteristic of "non-stem" departments.
+
+
+Before we use our model to make predictions uisng a train test split, let's validate common assumptions with logistic regression. 
+
+# Correlations of Indep variables
+
+
+
+
+```{r}
+
+
+independent_vars <- enhanced_data[, c("Avg_GPA", "Helpfulness", "Workload", "Clarity")]
+
+
+cor_matrix <- cor(independent_vars, use = "complete.obs")  # 'complete.obs' handles missing values by excluding them
+
+print(cor_matrix)
+
+```
+
+
+Helpfulness and Clarity look to be very correlated. 
+
+
+```{r}
+library(car)
+model_interaction <- glm(Dept.Type ~ Avg_GPA + Helpfulness + Workload + Clarity + Helpfulness * Clarity,
+                         data = enhanced_data,
+                         family = binomial())
+
+summary(model_interaction)
+
+vif_val <- vif(model_interaction)
+
+print(vif_val)
+
+```
+
+```{r}
+
+library(car)
+
+
+
+library(car)
+
+
+model.interaction <- glm(formula = Dept.Type ~ Avg_GPA + Workload + 
+    Helpfulness:Clarity, family = binomial, data = enhanced_data)
+
+# Calculate VIF
+vif_values <- vif(model.interaction, type = 'terms')
+print(vif_values)
+
+summary(model.interaction)
+```
+
+
+```{r}
+model.helpfulness <-  glm(formula = Dept.Type ~ Avg_GPA + Workload + 
+   Helpfulness, family = binomial, data = enhanced_data)
+
+vif_values <- vif(model.helpfulness)
+print(vif_values)
+
+summary(model.helpfulness)
+```
+
+```{r}
+summary(model.reduced)
+
+vif.reduced <- vif(model.reduced)
+
+print(vif.reduced)
+```
+
+# Model Validation Through Cross Validation
+
+```{r}
+library(boot)
+cv_help <- cv.glm(data = enhanced_data, glmfit = model.full, K = 10)
+
+print(cv_help$delta)
+```
+
+```{r}
+cv_reduced <- cv.glm(data = enhanced_data, glmfit = model.reduced, K = 10)
+
+print(cv_reduced$delta)
+```
+
+
+# Confusion Matrix Testing
+
+```{r}
+library(ROSE)
+
+balanced_data <- ovun.sample(Dept.Type ~ ., data = enhanced_data, method = "over", N = 2000)$data
+
+table(balanced_data$Dept.Type)
+
+
+```
+
+
+```{r}
+library(caret)
+
+
+
+set.seed(123)
+
+
+trainIndex <- createDataPartition(balanced_data$Dept.Type, p = 0.7, list = FALSE)
+trainData <- balanced_data[trainIndex, ]
+testData <- balanced_data[-trainIndex, ]
+
+model.reduced <- glm(formula = Dept.Type ~ Avg_GPA + Helpfulness + Workload + Clarity, 
+                  family = binomial(), data = trainData)
+
+
+
+
+probabilities <- predict(model.reduced, newdata = testData, type = "response")
+
+
+predicted_classes <- ifelse(probabilities > 0.4, "stem", "non-stem")
+actual_classes <- testData$Dept.Type
+
+
+conf_matrix <- confusionMatrix(as.factor(predicted_classes), as.factor(actual_classes))
+
+
+print(conf_matrix$table)
+print(conf_matrix$overall)
+print(conf_matrix$byClass)
+
+```
+
+```{r}
+library(caret)
+
+
+set.seed(123)
+
+
+trainIndex <- createDataPartition(enhanced_data$Dept.Type, p = 0.7, list = FALSE, times = 1)
+trainData <- enhanced_data[trainIndex, ]
+testData <- enhanced_data[-trainIndex, ]
+
+
+model.reduced2 <- glm(formula = Dept.Type ~ Avg_GPA + Clarity + Helpfulness + Workload, 
+                  family = binomial, data = trainData)
+
+
+probabilities <- predict(model.reduced2, newdata = testData, type = "response")
+predicted_classes <- ifelse(probabilities > 0.5, "stem", "non-stem")
+actual_classes <- testData$Dept.Type
+
+
+conf_matrix <- confusionMatrix(as.factor(predicted_classes), as.factor(actual_classes))
+
+
+print(conf_matrix$table)
+print(conf_matrix$overall)
+print(conf_matrix$byClass)
+
+```
+
+
+```{r}
+summary(model.reduced2)
+```
+
+
+```{r}
+
+library(caret)
+
+
+set.seed(123)
+
+
+trainIndex <- createDataPartition(enhanced_data$Dept.Type, p = 0.7, list = FALSE, times = 1)
+trainData <- enhanced_data[trainIndex, ]
+testData <- enhanced_data[-trainIndex, ]
+
+
+model.reduced2 <- glm(formula = Dept.Type ~ Avg_GPA + Clarity + Overall_Rating, 
+                  family = binomial, data = trainData)
+
+
+probabilities <- predict(model.reduced2, newdata = testData, type = "response")
+predicted_classes <- ifelse(probabilities > 0.503, "stem", "non-stem")
+actual_classes <- testData$Dept.Type
+
+
+conf_matrix <- confusionMatrix(as.factor(predicted_classes), as.factor(actual_classes))
+
+
+print(conf_matrix$table)
+print(conf_matrix$overall)
+print(conf_matrix$byClass)
+
+summary(model.reduced2)
+
+vif_p <- vif(model.reduced2)
+
+print(vif_p)
+
+```
+
+```{r}
+
+x <- model.matrix(Dept.Type ~ Avg_GPA + Clarity + Overall_Rating  - 1, data = enhanced_data) # -1 to exclude intercept
+y <- as.factor(enhanced_data$Dept.Type)
+
+```
+
+```{r}
+library(glmnet)
+# Fit a logistic regression model with L1 regularization
+fit <- glmnet(x, y, family = "binomial", alpha = 1)
+
+# Fit with L2 regularization
+fit_ridge <- glmnet(x, y, family = "binomial", alpha = 0)
+
+
+fit_elastic <- glmnet(x, y, family = "binomial", alpha = 0.5)
+
+```
+
+```{r}
+cv_fit <- cv.glmnet(x, y, family = "binomial", type.measure = "class", alpha = 1)
+plot(cv_fit)
+best_lambda <- cv_fit$lambda.min  
+
+
+final_model <- glmnet(x, y, family = "binomial", alpha = 1, lambda = best_lambda)
+
+```
+```{r}
+set.seed(123)  
+
+enhanced_data2 <- na.omit(enhanced_data)
+
+trainIndex <- createDataPartition(enhanced_data2$Dept.Type, p = 0.75, list = FALSE)
+trainData <- enhanced_data2[trainIndex,]
+testData <- enhanced_data2[-trainIndex,]
+
+
+grid <- expand.grid(
+  .alpha = seq(0, 1, by = 0.1),  
+  .lambda = 10^seq(-3, 1, by = 0.5)  
+)
+
+
+trainControl <- trainControl(
+  method = "cv",          
+  number = 10,            
+  savePredictions = "final",
+  verboseIter = TRUE      
+)
+
+
+set.seed(123)
+model <- train(
+  Dept.Type ~ Avg_GPA + Clarity + Overall_Rating + Helpfulness + Workload,             
+  data = trainData,          
+  method = "glmnet",         
+  tuneGrid = grid,           
+  trControl = trainControl   
+)
+
+print(model)
+print(model$results)
+
+summary(model)
+```
+
+```{r}
+predictions <- predict(model, newdata = testData)
+confusionMatrix(predictions, testData$Dept.Type)
+
+```
+
