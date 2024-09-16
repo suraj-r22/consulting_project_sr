@@ -1,0 +1,366 @@
+---
+title: "Final Stats 141XP Cleaning"
+author: 'Suraj Rajan (UID: 206066871)'
+date: "2024-06-03"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+chem_bio_df = read.csv("chemistry_and_biochemistry_department.csv")
+
+comm_df <- read.csv("communication_department.csv")
+
+econ_df <- read.csv("economics_department.csv")
+
+math_df <- read.csv("mathematics_department2.csv")
+
+physics_df <- read.csv("physics_department.csv")
+
+poli_sci_df <- read.csv("political_science_department.csv")
+
+psych_df <- read.csv("psychology_department.csv")
+
+
+
+stats_df <- read.csv("statistics_department2.csv")
+
+
+
+
+```
+
+```{r, echo = T, results='hide'}
+head(stats_df, 30)
+
+dim(stats_df)
+```
+
+
+```{r,echo = T, results='hide'}
+head(comm_df,45)
+
+dim(comm_df)
+```
+
+
+```{r,echo = T, results='hide'}
+head(chem_bio_df, 500 )
+```
+```{r,echo = T, results='hide'}
+head(econ_df, 50)
+```
+Before we combine our dataframes for cleaning, we must make sure the Easiness, Clarity, Workload, and Helpfulness Ratings have the same datatype. 
+
+Right now the columns in a few of these dfs are of type character, while others are type numeric, so lets convert them all to to numeric. 
+
+```{r}
+column_names = c("Easiness", "Clarity", "Workload", "Helpfulness")
+```
+
+
+```{r}
+
+library(dplyr)
+Edit_data <- function(data) {
+  clean_data <- data %>%
+    mutate(Easiness = as.numeric(Easiness),
+           Clarity = as.numeric(Clarity),
+           Workload = as.numeric(Workload),
+           Helpfulness = as.numeric(Helpfulness))
+  
+  return(clean_data)
+  }
+```
+
+
+```{r}
+data_frames <- list(chem_bio_df, comm_df, econ_df, math_df, physics_df, poli_sci_df, psych_df, stats_df)
+
+clean_list <- lapply(data_frames, Edit_data)
+```
+
+
+
+```{r}
+library(dplyr)
+
+combined_df <- bind_rows(clean_list)
+
+head(combined_df)
+
+dim(combined_df)
+```
+
+
+
+
+```{r ,echo = T, results='hide'}
+head(combined_df)
+
+dim(combined_df)
+```
+```{r}
+combined_df$Overall_Rating <- as.numeric(combined_df$Overall_Rating)
+```
+
+```{r,echo = T, results='hide'}
+tail(combined_df)
+```
+
+
+```{r}
+grade_columns <- c("A.", "A", "A..1", "B.", "B", "B..1", "C.", "C", "C..1", "D.", "D", "D..1", "F")
+
+
+combined_df[grade_columns] <- lapply(combined_df[grade_columns], function(x) as.numeric(sub("%", "", x)))
+```
+
+
+
+```{r,echo = T, results='hide'}
+head(combined_df)
+```
+
+```{r}
+
+library(ggplot2)
+ggplot(combined_df, aes(x = Overall_Rating)) +
+  geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Overall Ratings", x = "Overall Rating", y = "Frequency")
+```
+
+
+```{r,echo = T, results='hide'}
+tail(combined_df)
+```
+```{r}
+combined_df[combined_df == "N/A"] <- NA
+```
+
+
+
+```{r,echo = T, results='hide'}
+head(combined_df)
+```
+
+
+```{r,echo = T, results='hide'}
+tail(combined_df)
+```
+
+
+
+
+
+
+
+```{r}
+classify_department <- function(code) {
+  
+  STEM <- c('^CHEM', '^MATH', '^PHYSICS', '^STATS')
+  
+
+  if (any(sapply(STEM, function(p) grepl(p, code, ignore.case = TRUE)))) {
+    return('stem')
+  } else {
+    return('non-stem')
+  }
+}
+
+combined_df <- combined_df %>%
+  mutate(Dept.Type = sapply(Class_Code, classify_department))
+
+```
+
+```{r , echo = T, results='hide'}
+head(combined_df, 500)
+```
+```{r , echo = T, results='hide'}
+explore <- combined_df %>%
+  filter(Dept.Type == "non-stem")
+
+tail(explore, 50)
+```
+
+
+```{r , echo = T, results='hide'}
+final_df <- combined_df %>%
+  select(Professor, Class_Code, Dept.Type, Class_Name, Overall_Rating, Easiness, Clarity, Workload, Helpfulness,A., A, A..1, B., B, B..1, C., C, C..1, D.,D, D..1,'F', Grade.Quarter, Review, Review.Quarter, Reviewer.Grade )
+
+head(final_df)
+tail(final_df)
+```
+```{r}
+colnames(combined_df)
+```
+
+```{r}
+colnames(final_df)
+```
+
+
+```{r, echo = T, results='hide'}
+
+cols_to_check <- c("Overall_Rating", "Easiness", "Clarity", "Workload", 
+                  "Helpfulness", "A.", "A", "A..1", "B.", "B", "B..1", 
+                  "C.", "C", "C..1", "D.", "D", "D..1", "F", "Grade.Quarter", "Review", 
+                  "Review.Quarter", "Reviewer.Grade")
+
+
+cleaned_df <- final_df %>%
+  filter(rowSums(is.na(select(., all_of(cols_to_check)))) < length(cols_to_check))
+
+head(cleaned_df)
+
+dim(cleaned_df)
+```
+
+By eliminating observations where all of the above columns have NA values, we reduced the dataset's total observations by 6919 observations.  
+
+```{r}
+table_stem <- table(cleaned_df$Dept.Type)
+
+table_stem
+```
+
+
+
+
+
+
+```{r}
+cleaned_df <- cleaned_df %>%
+  rename(A.Plus = A.,
+         A.Minus = A..1,
+         B.Plus = B.,
+         B.Minus = B..1,
+         C.Plus = C.,
+         C.Minus= C..1,
+         D.Plus = D.,
+         D.Minus = D..1
+         )
+```
+
+
+```{r, echo = T, results='hide'}
+head(cleaned_df)
+```
+
+
+```{r}
+sentiment_df <- cleaned_df %>%
+  filter(!is.na(Review)) %>%
+  distinct(Review, .keep_all = TRUE) %>%
+  select(-Grade.Quarter)
+
+
+
+```
+
+```{r}
+table(sentiment_df$Dept.Type)
+```
+
+```{r}
+write.csv(sentiment_df, "sentiment_cleaned.csv", row.names = FALSE)
+```
+
+
+
+```{r}
+
+
+
+```
+```{r}
+
+grade_columns <- c("A.Plus", "A", "A.Minus",
+                   "B.Plus", "B", "B.Minus",
+                   "C.Plus", "C", "C.Minus",
+                   "D.Plus", "D", "D.Minus", "F")
+
+
+grade_cleaned <- cleaned_df %>%
+  filter(rowSums(is.na(select(., all_of(grade_columns)))) < length(grade_columns))
+  
+```
+
+```{r}
+
+
+dim(grade_cleaned)
+```
+
+
+```{r}
+write.csv(grade_cleaned, "grade_cleaned2.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+#head(grade_cleaned)
+```
+```{r}
+explore_2 = grade_cleaned %>%
+  filter(Dept.Type == 'non-stem')
+
+#head(explore_2)
+```
+```{r}
+cols_to_check <- c("Professor", "Class_Code", "Dept.Type", "Class_Name", "Overall_Rating",
+                   "Easiness", "Clarity", "Workload", "Helpfulness", "A.Plus", "A", "A.Minus",
+                   "B.Plus", "B", "B.Minus", "C.Plus", "C", "C.Minus", "D.Plus", "D", "D.Minus", "F")
+
+grade_unique <- grade_cleaned %>%
+  distinct(across(all_of(cols_to_check)), .keep_all = TRUE)
+
+dim(grade_cleaned)
+dim(grade_unique)
+
+#head(grade_unique)
+
+table(grade_unique$Dept.Type)
+```
+
+```{r}
+library(stringr)
+depts <- c('CHEM', 'MATH', 'PHYSICS', 'STATS', 'ECON', 'COMM', 'PSYCH', 'POL SCI')
+grade_unique <- grade_unique %>%
+  mutate(Dept = str_extract(Class_Code, paste(depts, collapse = "|")))
+```
+
+
+
+```{r}
+#head(grade_unique)
+
+table(grade_unique$Dept)
+```
+
+```{r}
+grade_unique <- grade_unique %>%
+  select(Professor, Class_Code, Dept, everything())
+
+head(grade_unique)
+```
+```{r}
+depts <- c('CHEM', 'MATH', 'PHYSICS', 'STATS', 'ECON', 'COMM', 'PSYCH', 'POL SCI')
+sentiment_df <- sentiment_df %>%
+  mutate(Dept = str_extract(Class_Code, paste(depts, collapse = "|"))) %>%
+  select(Professor, Class_Code, Dept, everything())
+
+head(sentiment_df)
+
+```
+```{r}
+write.csv(grade_unique, "grade_cleaned3.csv", row.names = FALSE)
+write.csv(sentiment_df, "sentiment_df_updated.csv", row.names = FALSE)
+```
+
