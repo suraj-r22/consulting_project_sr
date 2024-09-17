@@ -7,4 +7,4 @@ Further cleaning was done in both files present in the repository, which include
 
 The second file also contains some classification models I fit to the data, including logistic regression. 
 
-Due to the data being webscraped, it was quite unstructured, so it involved a lot of cleaning. 
+Due to the data being webscraped, it was quite unstructured, so it required a lot of cleaning before the team could use it to create models and perform statistical analyses. 
