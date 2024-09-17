@@ -5,6 +5,6 @@ The first file (final eda) contains the initial cleaning and EDA where I explore
 
 Further cleaning was done in both files present in the repository, which included clearing rows that had missing values for all of the columns and ensuring that one observation did not have more weight than another (some observations had multiple grade distribution data points, so their ratings were duplicated in the datasets - for those data points, I took the average of the grade distributions to have one row present for that class). I used R's tidyverse library for these tasks. 
 
-The second file also contains some classification models I fit to the data, including logistic regression. 
+The second file also contains some classification models and statistical tests I fit to the data, including logistic regression. 
 
 Due to the data being webscraped, it was quite unstructured, so it required a lot of cleaning before the team could use it to create models and perform statistical analyses. 
